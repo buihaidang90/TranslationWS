@@ -1,0 +1,4 @@
+C:\Users\haidang\documents\visual studio 2015\Projects\TranslationWS\TranslationWS\bin\Debug\TranslationWS.dll
+C:\Users\haidang\documents\visual studio 2015\Projects\TranslationWS\TranslationWS\bin\Debug\TranslationWS.pdb
+C:\Users\haidang\documents\visual studio 2015\Projects\TranslationWS\TranslationWS\obj\Debug\TranslationWS.dll
+C:\Users\haidang\documents\visual studio 2015\Projects\TranslationWS\TranslationWS\obj\Debug\TranslationWS.pdb
