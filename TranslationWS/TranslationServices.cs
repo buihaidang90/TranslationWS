@@ -241,6 +241,7 @@ namespace TranslationWS
                     //client.Headers[HttpRequestHeader.ContentType] = "text/xml";
                     //client.Headers.Add(HttpRequestHeader.ContentType, "text/xml");
                     _client.Headers[HttpRequestHeader.ContentType] = "application/json"; // push parameters follow json type
+                    _client.Headers.Add("User-Agent", "TranslateDLL");
                     _client.Encoding = Encoding.UTF8; // encode string has sign
 
                     /// Body part
@@ -345,6 +346,7 @@ namespace TranslationWS
                     //client.Headers[HttpRequestHeader.ContentType] = "text/xml";
                     //client.Headers.Add(HttpRequestHeader.ContentType, "text/xml");
                     _client.Headers[HttpRequestHeader.ContentType] = "application/json"; // push parameters follow json type
+                    _client.Headers.Add("User-Agent", "TranslateDLL");
                     _client.Encoding = Encoding.UTF8; // encode string has sign
 
                     /// Body part
