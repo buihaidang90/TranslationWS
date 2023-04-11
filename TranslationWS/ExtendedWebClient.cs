@@ -20,14 +20,14 @@ namespace TranslationWS
                     _Timeout = DefinitionsWB.DefaultTimeoutSpace;
             }
         }
-        public ExtendedWebClient(Uri address, int timeout)
+        public ExtendedWebClient(Uri address, int? timeout)
         {
-            this._Timeout = timeout;//In Milli seconds
+            this._Timeout = (timeout == null ? DefinitionsWB.DefaultTimeoutSpace : timeout.Value);//In Milli seconds
             var objWebClient = GetWebRequest(address);
         }
-        public ExtendedWebClient(string stringUriAddress, int timeout)
+        public ExtendedWebClient(string stringUriAddress, int? timeout)
         {
-            this._Timeout = timeout;//In Milli seconds
+            this._Timeout = (timeout == null ? DefinitionsWB.DefaultTimeoutSpace : timeout.Value);//In Milli seconds
             if (!Uri.IsWellFormedUriString(stringUriAddress, UriKind.Absolute))
             {
                 throw new Exception("Your uri address is not valid.");

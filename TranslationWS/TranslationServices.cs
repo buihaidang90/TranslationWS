@@ -10,13 +10,19 @@ namespace TranslationWS
 {
     public class TranslationServices
     {
+        #region Authentication info
+        private object _Token = "";
+        private string _User = "";
+        #endregion
+
         #region Constructor
         /// <summary>
         /// Constructor
         /// </summary>
         /// <param name="Token">Access token</param>
-        public TranslationServices(object Token) // contructor
+        public TranslationServices(object Token, string User) // contructor
         {
+            this._User = User;
             this._Token = Token;
             SetWebServiceUrl(); // step 1
             ReadBaseUrlFromFile(); // step 2
@@ -26,10 +32,11 @@ namespace TranslationWS
         /// </summary>
         /// <param name="Token">Access token</param>
         /// <param name="TimeoutSpace">Timeout space when must to wait a long time (millisecond)</param>
-        public TranslationServices(object Token, int TimeoutSpace) // contructor
+        public TranslationServices(object Token, string User, int TimeoutSpace) // contructor
         {
             if (DefinitionsWB.MinTimeoutSpace <= TimeoutSpace && TimeoutSpace <= DefinitionsWB.MaxTimeoutSpace)
                 this._Timeout = TimeoutSpace;
+            this._User = User;
             this._Token = Token;
             SetWebServiceUrl(); // step 1
             ReadBaseUrlFromFile(); // step 2
@@ -83,12 +90,13 @@ namespace TranslationWS
         private string _TestUrl = @"";
         private string _TranslateV2Url = @"";
         private string _SqlTranslateV2Url = @"";
-        private object _Token = "";
+        private string _CustomerUrl = @"";
         private void SetWebServiceUrl()
         {
             _TestUrl = _BaseUrl + @"/api/Test";
             _TranslateV2Url = _BaseUrl + @"/api/TranslateV2";
             _SqlTranslateV2Url = _BaseUrl + @"/api/SqlTranslateV2";
+            _CustomerUrl = _BaseUrl + @"/api/Customer";
         }
         private void ReadBaseUrlFromFile()
         {
@@ -131,6 +139,7 @@ namespace TranslationWS
             public string source { get; set; }
             public string target { get; set; }
             public string key { get; set; } // authentication required if have
+            public string user { get; set; }
         }
         private struct ResponseWB
         {
@@ -151,7 +160,7 @@ namespace TranslationWS
             Detect,
             EN,
             VI,
-            JA,JP,
+            JA, JP,
             TH, // Thai
             MY, // Myanmar (Burmese)
             ID, // Indonesian
@@ -222,16 +231,6 @@ namespace TranslationWS
                 Message = HttpStatusCode.NotAcceptable.ToString();
                 return _result;
             }
-            //if (TimeoutSpace != null)
-            //{
-            //    if (TimeoutSpace < DefinitionsWB.MinTimeoutSpace || DefinitionsWB.MaxTimeoutSpace < TimeoutSpace)
-            //    {
-            //        Status = StatusWB.TimeoutSpaceInvalid;
-            //        Message = "TimeoutSpaceInvalid";
-            //        return _result;
-            //    }
-            //}
-            //else TimeoutSpace = _Timeout;
             try
             {
                 int _timeOutSpace = GetValidTimeoutSpace(TimeoutSpace);
@@ -241,7 +240,7 @@ namespace TranslationWS
                     //client.Headers[HttpRequestHeader.ContentType] = "text/xml";
                     //client.Headers.Add(HttpRequestHeader.ContentType, "text/xml");
                     _client.Headers[HttpRequestHeader.ContentType] = "application/json"; // push parameters follow json type
-                    _client.Headers.Add("User-Agent", "TranslateDLL");
+                    _client.Headers.Add(DefinitionsWB.UserAgentKeyword, DefinitionsWB.TranslateDllKeywork);
                     _client.Encoding = Encoding.UTF8; // encode string has sign
 
                     /// Body part
@@ -250,6 +249,7 @@ namespace TranslationWS
                     _req.source = ParseLanguageCode(Source);
                     _req.target = ParseLanguageCode(Target);
                     _req.key = _Token.ToString();
+                    _req.user = _User;
 
                     /// Calling web service
                     //Console.WriteLine(TranslateV2Url);
@@ -285,8 +285,8 @@ namespace TranslationWS
                 }
                 else
                 {
-                    Status = StatusWB.InternalServerError;
-                    Message = HttpStatusCode.InternalServerError.ToString();
+                    Status = StatusWB.ExceptionError;
+                    Message = ex.Message;
                 }
             }
             return _result;
@@ -327,16 +327,6 @@ namespace TranslationWS
                 Message = HttpStatusCode.NotAcceptable.ToString();
                 return _results;
             }
-            //if (TimeoutSpace != null)
-            //{
-            //    if (TimeoutSpace < DefinitionsWB.MinTimeoutSpace || DefinitionsWB.MaxTimeoutSpace < TimeoutSpace)
-            //    {
-            //        Status = StatusWB.TimeoutSpaceInvalid;
-            //        Message = "TimeoutSpaceInvalid";
-            //        return _results;
-            //    }
-            //}
-            //else TimeoutSpace = _Timeout;
             try
             {
                 int _timeOutSpace = GetValidTimeoutSpace(TimeoutSpace);
@@ -346,7 +336,7 @@ namespace TranslationWS
                     //client.Headers[HttpRequestHeader.ContentType] = "text/xml";
                     //client.Headers.Add(HttpRequestHeader.ContentType, "text/xml");
                     _client.Headers[HttpRequestHeader.ContentType] = "application/json"; // push parameters follow json type
-                    _client.Headers.Add("User-Agent", "TranslateDLL");
+                    _client.Headers.Add(DefinitionsWB.UserAgentKeyword, DefinitionsWB.TranslateDllKeywork);
                     _client.Encoding = Encoding.UTF8; // encode string has sign
 
                     /// Body part
@@ -355,6 +345,7 @@ namespace TranslationWS
                     _req.source = ParseLanguageCode(Source);
                     _req.target = ParseLanguageCode(Target);
                     _req.key = _Token.ToString();
+                    _req.user = _User;
 
                     /// Calling web service
                     //Console.WriteLine(TranslateV2Url);
@@ -387,8 +378,8 @@ namespace TranslationWS
                 }
                 else
                 {
-                    Status = StatusWB.InternalServerError;
-                    Message = HttpStatusCode.InternalServerError.ToString();
+                    Status = StatusWB.ExceptionError;
+                    Message = ex.Message;
                 }
             }
             return _results;
@@ -431,6 +422,93 @@ namespace TranslationWS
         #endregion
 
 
+        #region Customer Request
+        private struct CustomerRequest
+        {
+            public CustomerStruct[] data { get; set; }
+            public string key { get; set; }
+        }
+        private struct CustomerResponse
+        {
+            public int status { get; set; }
+            public string message { get; set; }
+        }
+        #endregion
+        /// <summary>
+        /// Information of customer need to push to server
+        /// </summary>
+        public struct CustomerStruct
+        {
+            public string Code { get; set; }
+            public string Name { get; set; }
+            public string Address { get; set; }
+            public string TaxCode { get; set; }
+            public string Phone { get; set; }
+            public string Remark { get; set; }
+        }
+        /// <summary>
+        /// /// Post information of single/multiple customers to server
+        /// </summary>
+        /// <param name="ListCusts">Customers list</param>
+        /// <returns></returns>
+        public bool PostCustomerInfo(List<CustomerStruct> ListCusts, out string Message) { return PostCustomerInfo(ListCusts.ToArray(), out Message); }
+        /// <summary>
+        /// Post information of single/multiple customers to server
+        /// </summary>
+        /// <param name="ArrayCusts">Customers array</param>
+        /// <returns></returns>
+        public bool PostCustomerInfo(CustomerStruct[] ArrayCusts, out string Message)
+        {
+            CustomerResponse res = new CustomerResponse();
+            try
+            {
+                using (ExtendedWebClient _client = new ExtendedWebClient(_CustomerUrl, null))
+                {
+                    //client.Headers.Add(HttpRequestHeader.ContentType, "text/xml");
+                    _client.Headers[HttpRequestHeader.ContentType] = "application/json"; // push parameters follow json type
+                    _client.Headers.Add(DefinitionsWB.UserAgentKeyword, DefinitionsWB.TranslateDllKeywork);
+                    _client.Encoding = Encoding.UTF8; // encode string has sign
+
+                    /// Body part
+                    CustomerRequest req = new CustomerRequest();
+                    req.data = ArrayCusts;
+                    req.key = _Token.ToString();
+
+                    /// Calling web service
+                    //Console.WriteLine(TranslateV2Url);
+                    string _data = JsonConvert.SerializeObject(req);
+                    string _jsonString = _client.UploadString(_CustomerUrl, MethodsWB.Post, _data); // POST method
+                    //Console.WriteLine(_jsonString);
+
+                    /// Receive output
+                    CustomerResponse _res = JsonConvert.DeserializeObject<CustomerResponse>(_jsonString);
+                    res.status = _res.status;
+                    res.message = _res.message;
+                }
+            }
+            catch (Exception ex)
+            {
+                //Console.WriteLine(ex.Message);
+                if (ex.Message.Contains("timed out")) //The operation has timed out
+                {
+                    res.status = StatusWB.RequestTimeout;
+                    res.message = HttpStatusCode.RequestTimeout.ToString();
+                }
+                else if (ex.Message.Contains("address is not valid")) //Your uri address is not valid.
+                {
+                    res.status = StatusWB.UrlInvalid; // HttpStatusCode.Ambiguous
+                    res.message = "UrlInvalid";
+                }
+                else
+                {
+                    res.status = StatusWB.ExceptionError;
+                    res.message = ex.Message;
+                }
+            }
+            Message = res.message;
+            return res.status == StatusWB.OK;
+        }
+
     }
 
 
@@ -447,6 +525,9 @@ namespace TranslationWS
         public static readonly int DefaultTimeoutSpace = 10000; /// millisecond = 10 second
         public static readonly int MinTimeoutSpace = 1; /// millisecond
         public static readonly int MaxTimeoutSpace = 300000; /// millisecond = 10 minute
+
+        public static readonly string UserAgentKeyword = "User-Agent";
+        public static readonly string TranslateDllKeywork = "TranslateDLL";
     }
     public static class StatusWB
     {
@@ -457,6 +538,7 @@ namespace TranslationWS
         public static readonly int NotAcceptable = (int)HttpStatusCode.NotAcceptable;
         public static readonly int RequestTimeout = (int)HttpStatusCode.RequestTimeout;
         public static readonly int InternalServerError = (int)HttpStatusCode.InternalServerError;
+        public static readonly int ExceptionError = 666;
     }
 
 
