@@ -10,37 +10,53 @@ namespace TranslationWS
 {
     public class TranslationServices
     {
-        #region Authentication info
+        #region AuthenticationConfiguration
         private object _Token = "";
         private string _User = "";
+        public void SetToken(object Token)
+        {
+            if (Token != null) this._Token = Token;
+        }
+        public void SetUser(string User)
+        {
+            if (User != null) this._User = User;
+        }
         #endregion
 
         #region Constructor
-        /// <summary>
-        /// Constructor
-        /// </summary>
-        /// <param name="Token">Access token</param>
-        public TranslationServices(object Token, string User) // contructor
-        {
-            this._User = User;
-            this._Token = Token;
-            SetWebServiceUrl(); // step 1
-            ReadBaseUrlFromFile(); // step 2
-        }
-        /// <summary>
-        /// Constructor
-        /// </summary>
-        /// <param name="Token">Access token</param>
-        /// <param name="TimeoutSpace">Timeout space when must to wait a long time (millisecond)</param>
-        public TranslationServices(object Token, string User, int TimeoutSpace) // contructor
+        private void constructClass(object Token, string User, int TimeoutSpace)
         {
             if (DefinitionsWB.MinTimeoutSpace <= TimeoutSpace && TimeoutSpace <= DefinitionsWB.MaxTimeoutSpace)
                 this._Timeout = TimeoutSpace;
-            this._User = User;
-            this._Token = Token;
+            if (Token != null) this._Token = Token;
+            if (User != null) this._User = User;
             SetWebServiceUrl(); // step 1
             ReadBaseUrlFromFile(); // step 2
         }
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="User">User is using this web service</param>
+        public TranslationServices(string User) { constructClass(null, User, DefinitionsWB.DefaultTimeoutSpace); }
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="User">User is using this web service</param>
+        /// <param name="TimeoutSpace">Timeout space when must to wait a long time (millisecond)</param>
+        public TranslationServices(string User, int TimeoutSpace) { constructClass(null, User, DefinitionsWB.DefaultTimeoutSpace); }
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="Token"></param>
+        /// <param name="User">User is using this web service</param>
+        public TranslationServices(object Token, string User) { constructClass(Token, User, DefinitionsWB.DefaultTimeoutSpace); }
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="Token"></param>
+        /// <param name="User">User is using this web service</param>
+        /// <param name="TimeoutSpace">Timeout space when must to wait a long time (millisecond)</param>
+        public TranslationServices(object Token, string User, int TimeoutSpace) { constructClass(Token, User, DefinitionsWB.DefaultTimeoutSpace); }
         #endregion
 
         #region TimeoutConfiguration
@@ -132,6 +148,7 @@ namespace TranslationWS
         }
         #endregion
 
+        #region Structs
         private struct RequestWB
         {
             /* request structure like from web service */
@@ -172,6 +189,7 @@ namespace TranslationWS
             ES, // Spanish
             RU, // Russian
         }
+        #endregion
 
         #region Methods
         private string ParseLanguageCode(LanguageCodes LangCode)
@@ -213,12 +231,14 @@ namespace TranslationWS
         /// <param name="RequestString">Request string need to translate</param>
         /// <param name="Source">Source ISO language code</param>
         /// <param name="Target">Target ISO language code</param>
+        /// <param name="Token"></param>
         /// <param name="Status">State code be returned from web service</param>
         /// <param name="Message">Message described operation detail</param>
         /// <param name="TimeoutSpace">Time-out space for request</param>
         /// <returns></returns>
-        public TranslationResult TranslateText(string RequestString, LanguageCodes Source, LanguageCodes Target, out int Status, out string Message, int? TimeoutSpace)
+        public TranslationResult TranslateText(string RequestString, LanguageCodes Source, LanguageCodes Target, out int Status, out string Message, int? TimeoutSpace, object Token)
         {
+            object tokenAuthen = (Token == null ? this._Token : Token);
             TranslationResult _result = new TranslationResult();
             _result.TranslatedText = "";
             _result.Source = "";
@@ -248,7 +268,7 @@ namespace TranslationWS
                     _req.data = new string[] { RequestString };
                     _req.source = ParseLanguageCode(Source);
                     _req.target = ParseLanguageCode(Target);
-                    _req.key = _Token.ToString();
+                    _req.key = tokenAuthen.ToString();
                     _req.user = _User;
 
                     /// Calling web service
@@ -298,13 +318,34 @@ namespace TranslationWS
         /// <param name="RequestString">Request string need to translate</param>
         /// <param name="Source">Source ISO language code</param>
         /// <param name="Target">Target ISO language code</param>
+        /// <param name="Token"></param>
         /// <param name="Status">State code be returned from web service</param>
         /// <param name="Message">Message described operation detail</param>
         /// <returns></returns>
-        public TranslationResult TranslateText(string RequestString, LanguageCodes Source, LanguageCodes Target, out int Status, out string Message)
-        {
-            return TranslateText(RequestString, Source, Target, out Status, out Message, null);
-        }
+        public TranslationResult TranslateText(string RequestString, LanguageCodes Source, LanguageCodes Target, out int Status, out string Message, object Token) { return TranslateText(RequestString, Source, Target, out Status, out Message, null, Token); }
+
+        /// <summary>
+        /// Translate single or multiple items of text request
+        /// </summary>
+        /// <param name="RequestString">Request string need to translate</param>
+        /// <param name="Source">Source ISO language code</param>
+        /// <param name="Target">Target ISO language code</param>
+        /// <param name="Status">State code be returned from web service</param>
+        /// <param name="Message">Message described operation detail</param>
+        /// <param name="TimeoutSpace">Time-out space for request</param>
+        /// <returns></returns>
+        public TranslationResult TranslateText(string RequestString, LanguageCodes Source, LanguageCodes Target, out int Status, out string Message, int? TimeoutSpace) { return TranslateText(RequestString, Source, Target, out Status, out Message, TimeoutSpace, null); }
+
+        /// <summary>
+        /// Translate single or multiple items of text request
+        /// </summary>
+        /// <param name="RequestString">Request string need to translate</param>
+        /// <param name="Source">Source ISO language code</param>
+        /// <param name="Target">Target ISO language code</param>
+        /// <param name="Status">State code be returned from web service</param>
+        /// <param name="Message">Message described operation detail</param>
+        /// <returns></returns>
+        public TranslationResult TranslateText(string RequestString, LanguageCodes Source, LanguageCodes Target, out int Status, out string Message) { return TranslateText(RequestString, Source, Target, out Status, out Message, null, null); }
 
         /// <summary>
         /// Translate single or multiple items of text request
@@ -312,12 +353,14 @@ namespace TranslationWS
         /// <param name="RequestArray">Request strings array need to translate</param>
         /// <param name="Source">Source ISO language code</param>
         /// <param name="Target">Target ISO language code</param>
+        /// <param name="Token"></param>
         /// <param name="Status">State code be returned from web service</param>
         /// <param name="Message">Message described operation detail</param>
         /// <param name="TimeoutSpace">Time-out space for request</param>
         /// <returns></returns>
-        public List<TranslationResult> TranslateText(string[] RequestArray, LanguageCodes Source, LanguageCodes Target, out int Status, out string Message, int? TimeoutSpace)
+        public List<TranslationResult> TranslateText(string[] RequestArray, LanguageCodes Source, LanguageCodes Target, out int Status, out string Message, int? TimeoutSpace, object Token)
         {
+            object tokenAuthen = (Token == null ? this._Token : Token);
             List<TranslationResult> _results = new List<TranslationResult>();
             Status = StatusWB.Gone;
             Message = HttpStatusCode.Gone.ToString();
@@ -344,7 +387,7 @@ namespace TranslationWS
                     _req.data = RequestArray;
                     _req.source = ParseLanguageCode(Source);
                     _req.target = ParseLanguageCode(Target);
-                    _req.key = _Token.ToString();
+                    _req.key = tokenAuthen.ToString();
                     _req.user = _User;
 
                     /// Calling web service
@@ -391,13 +434,34 @@ namespace TranslationWS
         /// <param name="RequestArray">Request strings array need to translate</param>
         /// <param name="Source">Source ISO language code</param>
         /// <param name="Target">Target ISO language code</param>
+        /// <param name="Token"></param>
         /// <param name="Status">State code be returned from web service</param>
         /// <param name="Message">Message described operation detail</param>
         /// <returns></returns>
-        public List<TranslationResult> TranslateText(string[] RequestArray, LanguageCodes Source, LanguageCodes Target, out int Status, out string Message)
-        {
-            return TranslateText(RequestArray, Source, Target, out Status, out Message, null);
-        }
+        public List<TranslationResult> TranslateText(string[] RequestArray, LanguageCodes Source, LanguageCodes Target, out int Status, out string Message, object Token) { return TranslateText(RequestArray, Source, Target, out Status, out Message, null, Token); }
+
+        /// <summary>
+        /// Translate single or multiple items of text request
+        /// </summary>
+        /// <param name="RequestArray">Request strings array need to translate</param>
+        /// <param name="Source">Source ISO language code</param>
+        /// <param name="Target">Target ISO language code</param>
+        /// <param name="Status">State code be returned from web service</param>
+        /// <param name="Message">Message described operation detail</param>
+        /// <param name="TimeoutSpace">Time-out space for request</param>
+        /// <returns></returns>
+        public List<TranslationResult> TranslateText(string[] RequestArray, LanguageCodes Source, LanguageCodes Target, out int Status, out string Message, int? TimeoutSpace) { return TranslateText(RequestArray, Source, Target, out Status, out Message, null, null); }
+
+        /// <summary>
+        /// Translate single or multiple items of text request
+        /// </summary>
+        /// <param name="RequestArray">Request strings array need to translate</param>
+        /// <param name="Source">Source ISO language code</param>
+        /// <param name="Target">Target ISO language code</param>
+        /// <param name="Status">State code be returned from web service</param>
+        /// <param name="Message">Message described operation detail</param>
+        /// <returns></returns>
+        public List<TranslationResult> TranslateText(string[] RequestArray, LanguageCodes Source, LanguageCodes Target, out int Status, out string Message) { return TranslateText(RequestArray, Source, Target, out Status, out Message, null, null); }
 
         /// <summary>
         /// Verify connection state of web service
@@ -434,6 +498,7 @@ namespace TranslationWS
             public string message { get; set; }
         }
         #endregion
+
         /// <summary>
         /// Information of customer need to push to server
         /// </summary>
