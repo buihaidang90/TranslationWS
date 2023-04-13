@@ -36,6 +36,10 @@ namespace TranslationWS
         /// <summary>
         /// Constructor
         /// </summary>
+        public TranslationServices() { constructClass(null, null, DefinitionsWB.DefaultTimeoutSpace); }
+        /// <summary>
+        /// Constructor
+        /// </summary>
         /// <param name="User">User is using this web service</param>
         public TranslationServices(string User) { constructClass(null, User, DefinitionsWB.DefaultTimeoutSpace); }
         /// <summary>
