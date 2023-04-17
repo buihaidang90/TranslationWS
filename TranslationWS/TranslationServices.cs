@@ -495,6 +495,7 @@ namespace TranslationWS
         {
             public CustomerStruct[] data { get; set; }
             public string key { get; set; }
+            public string user { get; set; }
         }
         private struct CustomerResponse
         {
@@ -542,6 +543,7 @@ namespace TranslationWS
                     CustomerRequest req = new CustomerRequest();
                     req.data = ArrayCusts;
                     req.key = _Token.ToString();
+                    req.user = _User;
 
                     /// Calling web service
                     //Console.WriteLine(TranslateV2Url);
