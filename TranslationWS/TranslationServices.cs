@@ -10,6 +10,12 @@ namespace TranslationWS
 {
     public class TranslationServices
     {
+        #region For Debug
+        private enum LogMode { Non, All, Fail, Success }
+        private int _DevMode = (int)LogMode.Non;
+        private string _LogFilePath = "_LogFile.txt";
+        #endregion
+
         #region AuthenticationConfiguration
         private object _Token = "";
         private string _User = "";
@@ -30,8 +36,13 @@ namespace TranslationWS
                 this._Timeout = TimeoutSpace;
             if (Token != null) this._Token = Token;
             if (User != null) this._User = User;
+            string _currentPath = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().GetName().CodeBase);
+            //
+            if (_currentPath.EndsWith("\\")) _LogFilePath = _currentPath + _LogFilePath;
+            else _LogFilePath = string.Concat(_currentPath, "\\", _LogFilePath);
+            //
             SetWebServiceUrl(); // step 1
-            ReadBaseUrlFromFile(); // step 2
+            ReadConfigFromFile(); // step 2
         }
         /// <summary>
         /// Constructor
@@ -61,6 +72,55 @@ namespace TranslationWS
         /// <param name="User">User is using this web service</param>
         /// <param name="TimeoutSpace">Timeout space when must to wait a long time (millisecond)</param>
         public TranslationServices(object Token, string User, int TimeoutSpace) { constructClass(Token, User, DefinitionsWB.DefaultTimeoutSpace); }
+        #endregion
+
+        #region Read configuration
+        private void ReadConfigFromFile()
+        {
+            string _pathFileConfig = @"Config_Dictionary.ini";
+            string _TextBaseUrl = "BaseUrl=";
+            string _TextDevMode = "DevMode=";
+            string _TextLogFile = "LogFile=";
+            try
+            {
+                if (_pathFileConfig == "" || !File.Exists(_pathFileConfig)) return;
+                foreach (string line in File.ReadAllLines(_pathFileConfig))
+                {
+                    if (!line.StartsWith(_TextBaseUrl)) continue;
+                    int iBegin = line.IndexOf(_TextBaseUrl) + _TextBaseUrl.Length;
+                    string _strUrl = line.Substring(iBegin, line.Length - iBegin);
+                    //Console.WriteLine(_strUrl);
+                    if (_strUrl.Length == 0) return;
+                    if (!Uri.IsWellFormedUriString(_strUrl, UriKind.Absolute)) return;
+                    if (_strUrl.EndsWith(@"/")) _strUrl = _strUrl.Substring(0, _strUrl.Length - 1);
+                    this._BaseUrl = _strUrl;
+                    SetWebServiceUrl();
+                    break;
+                }
+                foreach (string line in File.ReadAllLines(_pathFileConfig))
+                {
+                    if (!line.StartsWith(_TextDevMode)) continue;
+                    int iBegin = line.IndexOf(_TextDevMode) + _TextDevMode.Length;
+                    string _str = line.Substring(iBegin, line.Length - iBegin);
+                    //Console.WriteLine(_str);
+                    if (_str.Length == 0) return;
+                    int _num = 0; int.TryParse(_str, out _num);
+                    this._DevMode = _num;
+                    break;
+                }
+                foreach (string line in File.ReadAllLines(_pathFileConfig))
+                {
+                    if (!line.StartsWith(_TextLogFile)) continue;
+                    int iBegin = line.IndexOf(_TextLogFile) + _TextLogFile.Length;
+                    string _str = line.Substring(iBegin, line.Length - iBegin);
+                    //Console.WriteLine(_str);
+                    if (_str.Length == 0) return;
+                    _LogFilePath = _str;
+                    break;
+                }
+            }
+            catch (Exception ex) { Console.WriteLine(ex.Message); }
+        }
         #endregion
 
         #region TimeoutConfiguration
@@ -117,29 +177,6 @@ namespace TranslationWS
             _TranslateV2Url = _BaseUrl + @"/api/TranslateV2";
             _SqlTranslateV2Url = _BaseUrl + @"/api/SqlTranslateV2";
             _CustomerUrl = _BaseUrl + @"/api/Customer";
-        }
-        private void ReadBaseUrlFromFile()
-        {
-            string _pathFileConfig = @"Config_Dictionary.ini";
-            string _TextBaseUrl = "BaseUrl=";
-            try
-            {
-                if (_pathFileConfig == "" || !File.Exists(_pathFileConfig)) return;
-                foreach (string line in File.ReadAllLines(_pathFileConfig))
-                {
-                    if (!line.StartsWith(_TextBaseUrl)) continue;
-                    int iBegin = line.IndexOf(_TextBaseUrl) + _TextBaseUrl.Length;
-                    string _strUrl = line.Substring(iBegin, line.Length - iBegin);
-                    //Console.WriteLine(_strUrl);
-                    if (_strUrl.Length == 0) return;
-                    if (!Uri.IsWellFormedUriString(_strUrl, UriKind.Absolute)) return;
-                    if (_strUrl.EndsWith(@"/")) _strUrl = _strUrl.Substring(0, _strUrl.Length - 1);
-                    this._BaseUrl = _strUrl;
-                    SetWebServiceUrl();
-                    break;
-                }
-            }
-            catch (Exception ex) { Console.WriteLine(ex.Message); }
         }
         /// <summary>
         /// Configure base URL
@@ -288,6 +325,10 @@ namespace TranslationWS
                     _result.Charge = _res.data[0].charge;
                     Status = _res.status;
                     Message = _res.message;
+
+
+                    // Write log
+                    if (_DevMode == (int)LogMode.All || _DevMode == (int)LogMode.Success) WriteLog(FormatLine(Status.ToString(), Message, (int)LogMode.Success));
                 }
             }
             catch (Exception ex)
@@ -301,16 +342,22 @@ namespace TranslationWS
                 {
                     Status = StatusWB.RequestTimeout;
                     Message = HttpStatusCode.RequestTimeout.ToString();
+                    // Write log
+                    if (_DevMode == (int)LogMode.All || _DevMode == (int)LogMode.Fail) WriteLog(FormatLine(Status.ToString(), Message, (int)LogMode.Fail));
                 }
                 else if (ex.Message.Contains("address is not valid")) //Your uri address is not valid.
                 {
                     Status = StatusWB.UrlInvalid; // HttpStatusCode.Ambiguous
                     Message = "UrlInvalid";
+                    // Write log
+                    if (_DevMode == (int)LogMode.All || _DevMode == (int)LogMode.Fail) WriteLog(FormatLine(Status.ToString(), Message, (int)LogMode.Fail));
                 }
                 else
                 {
                     Status = StatusWB.ExceptionError;
                     Message = ex.Message;
+                    // Write log
+                    if (_DevMode == (int)LogMode.All || _DevMode == (int)LogMode.Fail) WriteLog(FormatLine(Status.ToString(), Message, (int)LogMode.Fail));
                 }
             }
             return _result;
@@ -412,6 +459,9 @@ namespace TranslationWS
                     }
                     Status = _res.status;
                     Message = _res.message;
+
+                    // Write log
+                    if (_DevMode == (int)LogMode.All || _DevMode == (int)LogMode.Success) WriteLog(FormatLine(Status.ToString(), Message, (int)LogMode.Success));
                 }
             }
             catch (Exception ex)
@@ -422,11 +472,15 @@ namespace TranslationWS
                 {
                     Status = StatusWB.RequestTimeout;
                     Message = HttpStatusCode.RequestTimeout.ToString();
+                    // Write log
+                    if (_DevMode == (int)LogMode.All || _DevMode == (int)LogMode.Fail) WriteLog(FormatLine(Status.ToString(), Message, (int)LogMode.Fail));
                 }
                 else
                 {
                     Status = StatusWB.ExceptionError;
                     Message = ex.Message;
+                    // Write log
+                    if (_DevMode == (int)LogMode.All || _DevMode == (int)LogMode.Fail) WriteLog(FormatLine(Status.ToString(), Message, (int)LogMode.Fail));
                 }
             }
             return _results;
@@ -580,6 +634,85 @@ namespace TranslationWS
             return res.status == StatusWB.OK;
         }
 
+        #region Private Method - Log
+        private string[] FormatLine(string StatusString, string MessageString, int Mode)
+        {
+            List<string> lst = new List<string>();
+            if (Mode <= (int)LogMode.Non || Mode > Enum.GetNames(typeof(LogMode)).Length - 1) return lst.ToArray();
+            if (StatusString.Trim().Length == 0 && MessageString.Trim().Length == 0) return lst.ToArray();
+            if (Mode == (int)LogMode.Success)
+                lst.Add(string.Concat("[Success]", " - [", DateTime.Now.ToString(), "]"));
+            else if (Mode == (int)LogMode.Fail)
+                lst.Add(string.Concat("[Fail]", " - [", DateTime.Now.ToString(), "]"));
+            lst.Add(string.Concat("ResCode: ", StatusString, "; ResMsg: ", MessageString));
+            return lst.ToArray();
+        }
+        private void WriteLog(string[] YourData)
+        {
+            if (_DevMode == (int)LogMode.Non) return;
+            if (_DevMode <= (int)LogMode.Non || _DevMode > Enum.GetNames(typeof(LogMode)).Length - 1) return;
+            WriteToFile(_LogFilePath, YourData, true);
+        }
+        private void WriteToFile(string FilePath, string[] YourData, bool CreateFileIfNotExists)
+        {
+            if (YourData == null) return;
+            if (YourData.Length == 0) return;
+            List<string> lst = new List<string>();
+            foreach (string data in YourData)
+            {
+                if (data == null) continue;
+                if (data.Trim() == string.Empty) continue;
+                lst.Add(data);
+            }
+            if (lst.Count == 0) return;
+            if (CreateFileIfNotExists)
+            {
+                string prefix = "file:\\";
+                if (FilePath.StartsWith(prefix)) FilePath = FilePath.Substring(prefix.Length, FilePath.Length - prefix.Length);
+                if (!File.Exists(FilePath))
+                    try {
+                        // Create a new file
+                        using (FileStream fs = File.Create(FilePath))
+                        {
+                            // Add some text to file    
+                            Byte[] title = new UTF8Encoding(true).GetBytes("[Auto-generated log file]");
+                            fs.Write(title, 0, title.Length);
+                            //byte[] author = new UTF8Encoding(true).GetBytes("Mahesh Chand");
+                            //fs.Write(author, 0, author.Length);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("[WriteToFile] Can not create file!");
+                        Console.WriteLine(ex.Message);
+                        return;
+                    }
+            }
+            //if (!FilePath.EndsWith(".txt")) return;
+            if (File.Exists(FilePath))
+            {
+                List<string> results = new List<string>();
+                string[] lines = File.ReadAllLines(FilePath);
+                foreach (string line in lines)
+                {
+                    results.Add(line);
+                }
+                foreach (string item in lst)
+                {
+                    results.Add(item);
+                }
+                try { File.WriteAllLines(FilePath, results.ToArray()); }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("[WriteToFile] Can not write to file!");
+                    Console.WriteLine(ex.Message);
+                    return;
+                }
+                return;
+            }
+            Console.WriteLine("[WriteToFile] File path is not exist!");
+        }
+        #endregion
     }
 
 

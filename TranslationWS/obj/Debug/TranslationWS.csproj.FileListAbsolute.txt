@@ -6,4 +6,3 @@ D:\SourceGitHub\TranslationWS\TranslationWS\bin\Debug\TranslationWS.dll
 D:\SourceGitHub\TranslationWS\TranslationWS\bin\Debug\TranslationWS.pdb
 D:\SourceGitHub\TranslationWS\TranslationWS\obj\Debug\TranslationWS.dll
 D:\SourceGitHub\TranslationWS\TranslationWS\obj\Debug\TranslationWS.pdb
-D:\SourceGitHub\TranslationWS\TranslationWS\obj\Debug\TranslationWS.csprojResolveAssemblyReference.cache
